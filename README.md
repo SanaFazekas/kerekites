@@ -1,1 +1,1 @@
-# kerekites
+kerekítés természetes számokkal
