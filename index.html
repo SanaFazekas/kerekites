@@ -201,6 +201,11 @@
             font-weight: bold;
         }
 
+        /* Print blank line (replaces input box in print view) */
+        .print-blank {
+            display: none;
+        }
+
         /* Step-by-step solution breakdown box */
         .solution-breakdown {
             background-color: #FDEDEC;
@@ -256,8 +261,14 @@
 
         /* Print formatting for PDF download */
         @media print {
-            .sidebar, .header-bar button, .summary-banner, #submit-container, .solution-breakdown {
+            .sidebar, .header-bar button, .summary-banner, #submit-container, .solution-breakdown, .screen-input {
                 display: none !important;
+            }
+            .print-blank {
+                display: inline-block !important;
+                border-bottom: 1px solid #000;
+                width: 90px;
+                text-align: center;
             }
             body {
                 height: auto;
@@ -272,11 +283,6 @@
                 border: 1px solid #000;
                 box-shadow: none;
                 break-inside: avoid;
-            }
-            .task-input {
-                border: none;
-                border-bottom: 1px solid #000;
-                background: transparent !important;
             }
         }
     </style>
@@ -488,12 +494,6 @@ function generateNewSeries() {
     const cols = parseInt(document.getElementById('cols-select').value);
     const rows = parseInt(document.getElementById('rows-select').value);
     const totalCount = cols * rows;
-    
-    // Frissítjük a select értékét a háttérben a kompatibilitás miatt
-    let countSelect = document.getElementById('count-select');
-    if(!countSelect) {
-        // Létrehozhatunk egy rejtett selectet ha szükséges, de itt közvetlenül a számolást használjuk
-    }
 
     const domainSelection = document.getElementById('domain-select').value;
     const roundSelection = document.getElementById('rounding-select').value;
@@ -522,7 +522,7 @@ function generateNewSeries() {
             number: num,
             roundTo: currentRound,
             correctAnswer: correctAnswer,
-            questionText: `Kerekítsd a(z) <strong>${num.toLocaleString()}</strong> számot <strong>${getRoundText(currentRound)}</strong>:`,
+            questionText: `kerekíts ${getRoundText(currentRound)}: <strong>${num.toLocaleString()}</strong>`,
             explanation: explanation
         });
     }
@@ -546,7 +546,10 @@ function renderTasks() {
         let displayAns = task.correctAnswer.toLocaleString();
 
         if (currentMode === 'individual') {
-            inputOrSolution = `<input type="text" class="task-input" id="ans-${idx}" placeholder="válasz">`;
+            inputOrSolution = `
+                <input type="text" class="task-input screen-input" id="ans-${idx}" placeholder="válasz">
+                <span class="print-blank"></span>
+            `;
         } else {
             inputOrSolution = `<span class="group-solution" id="sol-${idx}" style="visibility: ${answerKeyVisible ? 'visible' : 'hidden'}; color: var(--success); font-weight: bold;">= ${displayAns}</span>`;
         }
