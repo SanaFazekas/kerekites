@@ -8,6 +8,7 @@
         :root {
             --primary: #2980B9;
             --secondary: #3498DB;
+            --dark-blue: #1B4F72;
             --bg-color: #ECF0F1;
             --panel-bg: #FFFFFF;
             --text-color: #2C3E50;
@@ -73,14 +74,6 @@
             width: 100%;
         }
 
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.88rem;
-            margin-top: 4px;
-        }
-
         .mode-toggle {
             display: flex;
             background: #EAEDED;
@@ -120,12 +113,15 @@
             align-items: center;
             justify-content: center;
             gap: 5px;
+            text-decoration: none;
+            text-align: center;
         }
 
         .btn:hover { opacity: 0.9; }
         .btn-success { background: var(--success); }
         .btn-danger { background: var(--danger); }
         .btn-dark { background: var(--text-color); }
+        .btn-print { background: var(--dark-blue); }
 
         /* Main Content */
         .main-content {
@@ -170,13 +166,12 @@
             font-size: 1.2rem;
         }
 
-        /* Task List Layout */
+        /* Task Grid Layout */
         .tasks-container {
-            display: flex;
-            flex-direction: column;
+            display: grid;
             gap: 14px;
             width: 100%;
-            max-width: 850px;
+            max-width: 1100px;
             margin-bottom: 20px;
         }
 
@@ -195,15 +190,14 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 1.1rem;
-            flex-wrap: wrap;
+            font-size: 1rem;
             gap: 10px;
         }
 
         .task-input {
-            width: 180px !important;
+            width: 110px !important;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: bold;
         }
 
@@ -211,29 +205,25 @@
         .solution-breakdown {
             background-color: #FDEDEC;
             border-left: 4px solid var(--danger);
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #78281F;
             display: none;
             flex-direction: column;
             gap: 4px;
-            margin-top: 4px;
         }
 
         .solution-breakdown strong {
             color: var(--danger);
         }
 
-        /* Group / Projection Mode (2x font) */
+        /* Group / Projection Mode */
         .group-mode .task-card {
-            font-size: 1.9rem;
-            padding: 22px 26px;
-            border: 2px solid var(--primary);
+            font-size: 1.4rem;
         }
-
         .group-mode .task-main-row {
-            font-size: 1.7rem;
+            font-size: 1.3rem;
         }
 
         /* Statistics Table */
@@ -272,6 +262,7 @@
             body {
                 height: auto;
                 background: white;
+                overflow: visible;
             }
             .main-content {
                 padding: 0;
@@ -280,10 +271,12 @@
             .task-card {
                 border: 1px solid #000;
                 box-shadow: none;
+                break-inside: avoid;
             }
             .task-input {
                 border: none;
                 border-bottom: 1px solid #000;
+                background: transparent !important;
             }
         }
     </style>
@@ -308,47 +301,55 @@
         </div>
 
         <div class="form-group">
-            <label for="domain-select">Számkör:</label>
+            <label for="domain-select">Szint és Számkör:</label>
             <select id="domain-select" onchange="updateRoundingOptions()">
-                <option value="under10k">10 000 alatt</option>
-                <option value="over10k" selected>10 ezer felett (max. 1 millió)</option>
+                <option value="basic">Alapszint (1 - 1 000)</option>
+                <option value="medium" selected>Középszint (1 - 10 000)</option>
+                <option value="advanced">Haladószint (1 - 100 000)</option>
             </select>
         </div>
 
         <div class="form-group">
             <label for="rounding-select">Kerekítési hely:</label>
             <select id="rounding-select" onchange="generateNewSeries()">
-                <!-- Dinamikusan frissül a számkör alapján -->
+                <!-- Dinamikusan frissül -->
             </select>
         </div>
 
-        <div class="checkbox-group">
-            <input type="checkbox" id="adaptive-toggle">
-            <label for="adaptive-toggle">Adaptív nehezedés 🚀</label>
-        </div>
-
-        <div class="form-group" style="margin-top: 5px;">
-            <label for="count-select">Feladatok száma:</label>
-            <select id="count-select" onchange="generateNewSeries()">
-                <option value="6">6 feladat</option>
-                <option value="8">8 feladat</option>
-                <option value="10" selected>10 feladat</option>
-                <option value="12">12 feladat</option>
-                <option value="15">15 feladat</option>
-                <option value="20">20 feladat</option>
-            </select>
+        <div style="display: flex; gap: 8px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="cols-select">Oszlopok:</label>
+                <select id="cols-select" onchange="updateGridLayout()">
+                    <option value="1">1 oszlop</option>
+                    <option value="2">2 oszlop</option>
+                    <option value="3" selected>3 oszlop</option>
+                    <option value="4">4 oszlop</option>
+                    <option value="5">5 oszlop</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="rows-select">Sorok:</label>
+                <select id="rows-select" onchange="updateGridLayout()">
+                    <option value="2">2 sor</option>
+                    <option value="3">3 sor</option>
+                    <option value="4" selected>4 sor</option>
+                    <option value="5">5 sor</option>
+                    <option value="6">6 sor</option>
+                </select>
+            </div>
         </div>
 
         <button class="btn btn-success" onclick="generateNewSeries()">Új feladatsor 🔄</button>
+        <button class="btn btn-print" onclick="window.print()">Nyomtatható verzió (PDF) 📄</button>
 
-        <div style="margin-top: 10px;">
+        <div style="margin-top: 5px;">
             <h2>📊 Statisztika</h2>
             <div class="stats-wrapper">
                 <table>
                     <thead>
                         <tr>
                             <th>Név</th>
-                            <th>Hely</th>
+                            <th>Szint</th>
                             <th>Pont</th>
                             <th>%</th>
                         </tr>
@@ -357,7 +358,7 @@
                 </table>
             </div>
             <div style="display: flex; gap: 5px; margin-top: 8px;">
-                <button class="btn btn-dark" style="flex: 1;" onclick="downloadPDF()">Letöltés PDF-ben 📄</button>
+                <button class="btn btn-dark" style="flex: 1;" onclick="downloadStatsPDF()">Statisztika PDF 📥</button>
                 <button class="btn btn-danger" style="flex: 1;" onclick="clearStats()">Törlés 🗑️</button>
             </div>
         </div>
@@ -418,24 +419,34 @@ function updateRoundingOptions() {
     const roundSelect = document.getElementById('rounding-select');
     roundSelect.innerHTML = '';
 
-    if (domain === 'under10k') {
+    if (domain === 'basic') {
         roundSelect.innerHTML = `
             <option value="10">Tízesre</option>
             <option value="100" selected>Százasra</option>
-            <option value="1000">Ezresre</option>
             <option value="mixed">Kevert kerekítés</option>
         `;
-    } else {
+    } else if (domain === 'medium') {
         roundSelect.innerHTML = `
             <option value="10">Tízesre</option>
             <option value="100">Százasra</option>
             <option value="1000" selected>Ezresre</option>
-            <option value="10000">Tízezresre</option>
-            <option value="100000">Százezresre</option>
+            <option value="mixed">Kevert kerekítés</option>
+        `;
+    } else { // advanced
+        roundSelect.innerHTML = `
+            <option value="10">Tízesre</option>
+            <option value="100">Százasra</option>
+            <option value="1000">Ezresre</option>
+            <option value="10000" selected>Tízezresre</option>
             <option value="mixed">Kevert kerekítés</option>
         `;
     }
     generateNewSeries();
+}
+
+function updateGridLayout() {
+    const cols = document.getElementById('cols-select').value;
+    document.getElementById('tasks-wrapper').style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
 }
 
 function getRandomInt(min, max) {
@@ -444,12 +455,15 @@ function getRandomInt(min, max) {
 
 function generateNumber(domain, roundTo) {
     let min, max;
-    if (domain === 'under10k') {
-        min = Math.max(roundTo * 2, 120);
-        max = 9950;
+    if (domain === 'basic') {
+        min = Math.max(roundTo * 2, 15);
+        max = 990;
+    } else if (domain === 'medium') {
+        min = Math.max(roundTo * 2, 150);
+        max = 9900;
     } else {
-        min = Math.max(roundTo * 2, 12000);
-        max = 950000;
+        min = Math.max(roundTo * 2, 1500);
+        max = 95000;
     }
     return getRandomInt(min, max);
 }
@@ -459,7 +473,6 @@ function getRoundText(val) {
     if (val === 100) return 'százasra';
     if (val === 1000) return 'ezresre';
     if (val === 10000) return 'tízezresre';
-    if (val === 100000) return 'százezresre';
     return '';
 }
 
@@ -472,30 +485,31 @@ function generateNewSeries() {
         }
     }
 
-    const count = parseInt(document.getElementById('count-select').value);
+    const cols = parseInt(document.getElementById('cols-select').value);
+    const rows = parseInt(document.getElementById('rows-select').value);
+    const totalCount = cols * rows;
+    
+    // Frissítjük a select értékét a háttérben a kompatibilitás miatt
+    let countSelect = document.getElementById('count-select');
+    if(!countSelect) {
+        // Létrehozhatunk egy rejtett selectet ha szükséges, de itt közvetlenül a számolást használjuk
+    }
+
     const domainSelection = document.getElementById('domain-select').value;
     const roundSelection = document.getElementById('rounding-select').value;
-    const isAdaptive = document.getElementById('adaptive-toggle').checked;
 
     generatedTasks = [];
     answerKeyVisible = false;
     document.getElementById('summary-banner').style.display = 'none';
 
-    // Elérhető kerekítési helyek a számkör alapján
-    let roundOptions = domainSelection === 'under10k' ? [10, 100, 1000] : [10, 100, 1000, 10000, 100000];
+    let roundOptions = [];
+    if (domainSelection === 'basic') roundOptions = [10, 100];
+    else if (domainSelection === 'medium') roundOptions = [10, 100, 1000];
+    else roundOptions = [10, 100, 1000, 10000];
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < totalCount; i++) {
         let currentRound = roundSelection === 'mixed' ? roundOptions[Math.floor(Math.random() * roundOptions.length)] : parseInt(roundSelection);
-        let currentDomain = domainSelection;
-
-        if (isAdaptive && domainSelection === 'under10k' && i > count / 2) {
-            // Adaptív módban ha alulról indult, áttérhetünk nagyobb számkörbe is
-            currentDomain = 'over10k';
-            roundOptions = [1000, 10000, 100000];
-            if (roundSelection === 'mixed' && currentRound < 1000) currentRound = 1000;
-        }
-
-        let num = generateNumber(currentDomain, currentRound);
+        let num = generateNumber(domainSelection, currentRound);
         let correctAnswer = Math.round(num / currentRound) * currentRound;
 
         let nextDigit = Math.floor((num % (currentRound * 10)) / currentRound);
@@ -507,13 +521,13 @@ function generateNewSeries() {
         generatedTasks.push({
             number: num,
             roundTo: currentRound,
-            roundText: getRoundText(currentRound),
             correctAnswer: correctAnswer,
             questionText: `Kerekítsd a(z) <strong>${num.toLocaleString()}</strong> számot <strong>${getRoundText(currentRound)}</strong>:`,
             explanation: explanation
         });
     }
 
+    updateGridLayout();
     renderTasks();
 }
 
@@ -543,7 +557,7 @@ function renderTasks() {
                 ${inputOrSolution}
             </div>
             <div class="solution-breakdown" id="breakdown-${idx}">
-                <strong>Levezetés / Magyarázat:</strong>
+                <strong>Levezetés:</strong>
                 <div>${task.explanation}</div>
             </div>
         `;
@@ -591,20 +605,20 @@ function checkAnswers() {
 
     document.getElementById('main-content-area').scrollTop = 0;
 
-    let roundSelectElem = document.getElementById('rounding-select');
-    let roundText = roundSelectElem.options[roundSelectElem.selectedIndex].text;
-    saveStat(name, roundText, `${correct}/${total}`, `${percent}%`);
+    let domainElem = document.getElementById('domain-select');
+    let domainText = domainElem.options[domainElem.selectedIndex].text.split('(')[0].trim();
+    saveStat(name, domainText, `${correct}/${total}`, `${percent}%`);
 }
 
 function saveStat(name, roundType, score, percent) {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v2') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
     stats.push({ name: name, roundType: roundType, score: score, percent: percent });
-    localStorage.setItem('math_kerekites_stats_v2', JSON.stringify(stats));
+    localStorage.setItem('math_kerekites_stats_v3', JSON.stringify(stats));
     renderStats();
 }
 
 function renderStats() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v2') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
     const tbody = document.getElementById('stats-tbody');
     tbody.innerHTML = '';
     stats.forEach(s => {
@@ -621,13 +635,13 @@ function renderStats() {
 
 function clearStats() {
     if (confirm('Biztosan törölni szeretnéd a statisztikát?')) {
-        localStorage.removeItem('math_kerekites_stats_v2');
+        localStorage.removeItem('math_kerekites_stats_v3');
         renderStats();
     }
 }
 
-function downloadPDF() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v2') || '[]');
+function downloadStatsPDF() {
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
     if (stats.length === 0) {
         alert('Nincs mentett statisztika a letöltéshez!');
         return;
