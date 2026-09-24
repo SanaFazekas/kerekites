@@ -201,12 +201,10 @@
             font-weight: bold;
         }
 
-        /* Print blank line (replaces input box in print view) */
         .print-blank {
             display: none;
         }
 
-        /* Step-by-step solution breakdown box */
         .solution-breakdown {
             background-color: #FDEDEC;
             border-left: 4px solid var(--danger);
@@ -223,7 +221,6 @@
             color: var(--danger);
         }
 
-        /* Group / Projection Mode */
         .group-mode .task-card {
             font-size: 1.4rem;
         }
@@ -233,7 +230,7 @@
 
         /* Statistics Table */
         .stats-wrapper {
-            max-height: 150px;
+            max-height: 180px;
             overflow-y: auto;
             border: 1px solid var(--border);
             border-radius: 4px;
@@ -259,12 +256,25 @@
             top: 0;
         }
 
-        /* Print formatting for PDF download */
+        /* Print formatting (Default: normal task sheet print) */
         @media print {
-            .sidebar, .header-bar button, .summary-banner, #submit-container, .solution-breakdown, .screen-input {
+            body.print-stats-mode .sidebar,
+            body.print-stats-mode .main-content > *:not(#stats-print-section) {
                 display: none !important;
             }
-            .print-blank {
+            body.print-stats-mode #stats-print-section {
+                display: block !important;
+            }
+
+            body:not(.print-stats-mode) .sidebar, 
+            body:not(.print-stats-mode) .header-bar button, 
+            body:not(.print-stats-mode) .summary-banner, 
+            body:not(.print-stats-mode) #submit-container, 
+            body:not(.print-stats-mode) .solution-breakdown, 
+            body:not(.print-stats-mode) .screen-input {
+                display: none !important;
+            }
+            body:not(.print-stats-mode) .print-blank {
                 display: inline-block !important;
                 border-bottom: 1px solid #000;
                 width: 90px;
@@ -284,6 +294,10 @@
                 box-shadow: none;
                 break-inside: avoid;
             }
+        }
+
+        #stats-print-section {
+            display: none;
         }
     </style>
 </head>
@@ -346,7 +360,7 @@
         </div>
 
         <button class="btn btn-success" onclick="generateNewSeries()">Új feladatsor 🔄</button>
-        <button class="btn btn-print" onclick="window.print()">Nyomtatható verzió (PDF) 📄</button>
+        <button class="btn btn-print" onclick="printTaskSheet()">Nyomtatható verzió (PDF) 📄</button>
 
         <div style="margin-top: 5px;">
             <h2>📊 Statisztika</h2>
@@ -358,13 +372,14 @@
                             <th>Szint</th>
                             <th>Pont</th>
                             <th>%</th>
+                            <th>Jegy</th>
                         </tr>
                     </thead>
                     <tbody id="stats-tbody"></tbody>
                 </table>
             </div>
             <div style="display: flex; gap: 5px; margin-top: 8px;">
-                <button class="btn btn-dark" style="flex: 1;" onclick="downloadStatsPDF()">Statisztika PDF 📥</button>
+                <button class="btn btn-dark" style="flex: 1;" onclick="printStatsPDF()">Statisztika PDF 📥</button>
                 <button class="btn btn-danger" style="flex: 1;" onclick="clearStats()">Törlés 🗑️</button>
             </div>
         </div>
@@ -387,6 +402,12 @@
         <div id="submit-container" style="margin-top: 10px; display: flex; gap: 10px;">
             <button id="btn-check" class="btn btn-success" style="font-size: 1.1rem; padding: 10px 20px;" onclick="checkAnswers()">Ellenőrzés ✨</button>
             <button id="btn-show-key" class="btn btn-dark" style="font-size: 1.1rem; padding: 10px 20px; display: none;" onclick="toggleAnswerKey()">Megoldókulcs 🔑</button>
+        </div>
+
+        <!-- Print-only detailed stats section -->
+        <div id="stats-print-section">
+            <h2 style="color: #2980B9; border-bottom: 2px solid #2980B9; padding-bottom: 5px;">Részletes Statisztikai Jegyzőkönyv</h2>
+            <div id="stats-print-content" style="margin-top: 15px; font-size: 0.95rem;"></div>
         </div>
     </div>
 
@@ -438,7 +459,7 @@ function updateRoundingOptions() {
             <option value="1000" selected>Ezresre</option>
             <option value="mixed">Kevert kerekítés</option>
         `;
-    } else { // advanced
+    } else {
         roundSelect.innerHTML = `
             <option value="10">Tízesre</option>
             <option value="100">Százasra</option>
@@ -576,52 +597,76 @@ function toggleAnswerKey() {
     });
 }
 
+function calculateGrade(percent) {
+    if (percent >= 90) return 1;
+    if (percent >= 75) return 2;
+    if (percent >= 50) return 3;
+    if (percent >= 25) return 4;
+    return 5;
+}
+
 function checkAnswers() {
     let correct = 0;
+    let detailsList = [];
+
     generatedTasks.forEach((task, idx) => {
         const input = document.getElementById(`ans-${idx}`);
         const breakdownBox = document.getElementById(`breakdown-${idx}`);
         if (!input) return;
 
-        let userVal = parseInt(input.value.trim().replace(/\s+/g, '').replace(/\./g, ''));
+        let rawUserVal = input.value.trim();
+        let userVal = parseInt(rawUserVal.replace(/\s+/g, '').replace(/\./g, ''));
 
-        if (userVal === task.correctAnswer) {
-            correct++;
-            input.style.borderColor = 'var(--success)';
-            input.style.backgroundColor = '#E8F8F5';
-            if (breakdownBox) breakdownBox.style.display = 'none';
-        } else {
-            input.style.borderColor = 'var(--danger)';
-            input.style.backgroundColor = '#FDEDEC';
-            if (breakdownBox) breakdownBox.style.display = 'flex';
+        let isCorrect = (userVal === task.correctAnswer);
+        if (isCorrect) correct++;
+
+        if (input.style) {
+            if (isCorrect) {
+                input.style.borderColor = 'var(--success)';
+                input.style.backgroundColor = '#E8F8F5';
+                if (breakdownBox) breakdownBox.style.display = 'none';
+            } else {
+                input.style.borderColor = 'var(--danger)';
+                input.style.backgroundColor = '#FDEDEC';
+                if (breakdownBox) breakdownBox.style.display = 'flex';
+            }
         }
+
+        detailsList.push({
+            index: idx + 1,
+            userText: rawUserVal !== '' ? rawUserVal : 'üres',
+            correctText: task.correctAnswer.toLocaleString(),
+            isCorrect: isCorrect
+        });
     });
 
     const total = generatedTasks.length;
     const name = document.getElementById('student-name').value.trim() || 'Tanuló';
     const percent = Math.round((correct / total) * 100);
+    const grade = calculateGrade(percent);
 
     const banner = document.getElementById('summary-banner');
     document.getElementById('summary-title').innerText = `Eredményértékelés - ${name}`;
-    document.getElementById('summary-details').innerHTML = `Pontszám: ${correct} / ${total} (${percent}%)`;
+    document.getElementById('summary-details').innerHTML = `Pontszám: ${correct} / ${total} (${percent}%) | Osztályzat: <strong>${grade}</strong>`;
     banner.style.display = 'flex';
 
     document.getElementById('main-content-area').scrollTop = 0;
 
     let domainElem = document.getElementById('domain-select');
     let domainText = domainElem.options[domainElem.selectedIndex].text.split('(')[0].trim();
-    saveStat(name, domainText, `${correct}/${total}`, `${percent}%`);
+    
+    saveStat(name, domainText, `${correct}/${total}`, `${percent}%`, grade, detailsList);
 }
 
-function saveStat(name, roundType, score, percent) {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
-    stats.push({ name: name, roundType: roundType, score: score, percent: percent });
-    localStorage.setItem('math_kerekites_stats_v3', JSON.stringify(stats));
+function saveStat(name, roundType, score, percent, grade, details) {
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
+    stats.push({ name: name, roundType: roundType, score: score, percent: percent, grade: grade, details: details });
+    localStorage.setItem('math_kerekites_stats_v4', JSON.stringify(stats));
     renderStats();
 }
 
 function renderStats() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
     const tbody = document.getElementById('stats-tbody');
     tbody.innerHTML = '';
     stats.forEach(s => {
@@ -631,6 +676,7 @@ function renderStats() {
                 <td>${s.roundType}</td>
                 <td><strong>${s.score}</strong></td>
                 <td><strong>${s.percent}</strong></td>
+                <td><strong>${s.grade}</strong></td>
             </tr>
         `;
     });
@@ -638,17 +684,37 @@ function renderStats() {
 
 function clearStats() {
     if (confirm('Biztosan törölni szeretnéd a statisztikát?')) {
-        localStorage.removeItem('math_kerekites_stats_v3');
+        localStorage.removeItem('math_kerekites_stats_v4');
         renderStats();
     }
 }
 
-function downloadStatsPDF() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v3') || '[]');
+function printTaskSheet() {
+    document.body.classList.remove('print-stats-mode');
+    window.print();
+}
+
+function printStatsPDF() {
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
     if (stats.length === 0) {
         alert('Nincs mentett statisztika a letöltéshez!');
         return;
     }
+
+    const container = document.getElementById('stats-print-content');
+    container.innerHTML = '';
+
+    stats.forEach((s, idx) => {
+        let detailsFormatted = s.details.map(d => `${d.index}. ${d.userText} (H: ${d.correctText})`).join(', ');
+        container.innerHTML += `
+            <div style="margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                <strong>${idx + 1}. Tanuló:</strong> ${s.name} | <strong>Szint:</strong> ${s.roundType} | <strong>Pont:</strong> ${s.score} (${s.percent}) | <strong>Osztályzat:</strong> ${s.grade}<br>
+                <div style="margin-top: 5px; font-size: 0.85rem; color: #444;"><strong>Válaszok:</strong> ${detailsFormatted}</div>
+            </div>
+        `;
+    });
+
+    document.body.classList.add('print-stats-mode');
     window.print();
 }
 
