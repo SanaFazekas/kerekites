@@ -256,10 +256,13 @@
             top: 0;
         }
 
-        /* Print formatting (Default: normal task sheet print) */
+        /* Print formatting */
         @media print {
             body.print-stats-mode .sidebar,
-            body.print-stats-mode .main-content > *:not(#stats-print-section) {
+            body.print-stats-mode .header-bar,
+            body.print-stats-mode #summary-banner,
+            body.print-stats-mode .tasks-container,
+            body.print-stats-mode #submit-container {
                 display: none !important;
             }
             body.print-stats-mode #stats-print-section {
@@ -271,7 +274,8 @@
             body:not(.print-stats-mode) .summary-banner, 
             body:not(.print-stats-mode) #submit-container, 
             body:not(.print-stats-mode) .solution-breakdown, 
-            body:not(.print-stats-mode) .screen-input {
+            body:not(.print-stats-mode) .screen-input,
+            body:not(.print-stats-mode) #stats-print-section {
                 display: none !important;
             }
             body:not(.print-stats-mode) .print-blank {
@@ -406,8 +410,8 @@
 
         <!-- Print-only detailed stats section -->
         <div id="stats-print-section">
-            <h2 style="color: #2980B9; border-bottom: 2px solid #2980B9; padding-bottom: 5px;">Részletes Statisztikai Jegyzőkönyv</h2>
-            <div id="stats-print-content" style="margin-top: 15px; font-size: 0.95rem;"></div>
+            <h2 style="color: #2980B9; border-bottom: 2px solid #2980B9; padding-bottom: 5px; margin-bottom: 15px;">Statisztikai Jegyzőkönyv és Eredmények</h2>
+            <div id="stats-print-content"></div>
         </div>
     </div>
 
@@ -534,10 +538,10 @@ function generateNewSeries() {
         let correctAnswer = Math.round(num / currentRound) * currentRound;
 
         let nextDigit = Math.floor((num % (currentRound * 10)) / currentRound);
+        let compSymbol = nextDigit >= 5 ? '≥ 5' : '< 5';
+        let direction = nextDigit >= 5 ? 'felfelé' : 'lefelé';
 
-        let explanation = `Kerekítsük a(z) ${num.toLocaleString()} számot ${getRoundText(currentRound)}! ` +
-            `A kerekítési hely utáni számjegy ${nextDigit}. Mivel ez ${nextDigit >= 5 ? '5 vagy nagyobb, felfelé kerekítünk.' : '4 vagy kisebb, lefelé kerekítünk.'} ` +
-            `A helyes kerekített érték: <strong>${correctAnswer.toLocaleString()}</strong>.`;
+        let explanation = `a kerekítési hely utáni számjegy ${nextDigit} (${compSymbol}), ezért ${direction} kerekítünk: <strong>${correctAnswer.toLocaleString()}</strong>`;
 
         generatedTasks.push({
             number: num,
@@ -659,14 +663,14 @@ function checkAnswers() {
 }
 
 function saveStat(name, roundType, score, percent, grade, details) {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v5') || '[]');
     stats.push({ name: name, roundType: roundType, score: score, percent: percent, grade: grade, details: details });
-    localStorage.setItem('math_kerekites_stats_v4', JSON.stringify(stats));
+    localStorage.setItem('math_kerekites_stats_v5', JSON.stringify(stats));
     renderStats();
 }
 
 function renderStats() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v5') || '[]');
     const tbody = document.getElementById('stats-tbody');
     tbody.innerHTML = '';
     stats.forEach(s => {
@@ -684,7 +688,7 @@ function renderStats() {
 
 function clearStats() {
     if (confirm('Biztosan törölni szeretnéd a statisztikát?')) {
-        localStorage.removeItem('math_kerekites_stats_v4');
+        localStorage.removeItem('math_kerekites_stats_v5');
         renderStats();
     }
 }
@@ -695,24 +699,44 @@ function printTaskSheet() {
 }
 
 function printStatsPDF() {
-    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v4') || '[]');
+    let stats = JSON.parse(localStorage.getItem('math_kerekites_stats_v5') || '[]');
     if (stats.length === 0) {
         alert('Nincs mentett statisztika a letöltéshez!');
         return;
     }
 
     const container = document.getElementById('stats-print-content');
-    container.innerHTML = '';
+    let tableHTML = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;">
+            <thead>
+                <tr style="background-color: #2980B9; color: white;">
+                    <th style="border: 1px solid #ccc; padding: 8px;">Név</th>
+                    <th style="border: 1px solid #ccc; padding: 8px;">Szint</th>
+                    <th style="border: 1px solid #ccc; padding: 8px;">Pont</th>
+                    <th style="border: 1px solid #ccc; padding: 8px;">%</th>
+                    <th style="border: 1px solid #ccc; padding: 8px;">Jegy</th>
+                    <th style="border: 1px solid #ccc; padding: 8px;">Részletes válaszok (H: Helyes)</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-    stats.forEach((s, idx) => {
+    stats.forEach(s => {
         let detailsFormatted = s.details.map(d => `${d.index}. ${d.userText} (H: ${d.correctText})`).join(', ');
-        container.innerHTML += `
-            <div style="margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
-                <strong>${idx + 1}. Tanuló:</strong> ${s.name} | <strong>Szint:</strong> ${s.roundType} | <strong>Pont:</strong> ${s.score} (${s.percent}) | <strong>Osztályzat:</strong> ${s.grade}<br>
-                <div style="margin-top: 5px; font-size: 0.85rem; color: #444;"><strong>Válaszok:</strong> ${detailsFormatted}</div>
-            </div>
+        tableHTML += `
+            <tr>
+                <td style="border: 1px solid #ccc; padding: 6px; text-align: left;"><strong>${s.name}</strong></td>
+                <td style="border: 1px solid #ccc; padding: 6px;">${s.roundType}</td>
+                <td style="border: 1px solid #ccc; padding: 6px;">${s.score}</td>
+                <td style="border: 1px solid #ccc; padding: 6px;">${s.percent}</td>
+                <td style="border: 1px solid #ccc; padding: 6px; font-weight: bold;">${s.grade}</td>
+                <td style="border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 0.8rem;">${detailsFormatted}</td>
+            </tr>
         `;
     });
+
+    tableHTML += `</tbody></table>`;
+    container.innerHTML = tableHTML;
 
     document.body.classList.add('print-stats-mode');
     window.print();
